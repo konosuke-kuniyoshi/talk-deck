@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Genre {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  color       String    @default("#3B82F6")
+  cards       Card[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("genres")
+}
+
+model Card {
+  id          String   @id @default(cuid())
+  question    String
+  description String?
+  genreId     String
+  genre       Genre    @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([genreId])
+  @@map("cards")
+}
+
+model CustomDeck {
+  id          String       @id @default(cuid())
+  name        String       // デッキ名（例：「うちのチーム用」）
+  description String?
+  userId      String?      // ユーザーID（ログイン機能があれば）
+  cards       CustomCard[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@map("custom_decks")
+}
+
+model CustomCard {
+  id          String      @id @default(cuid())
+  question    String
+  description String?
+  deckId      String
+  deck        CustomDeck  @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@index([deckId])
+  @@map("custom_cards")
+}
+
+model GameSession {
+  id                String   @id @default(cuid())
+  cardCount         Int      @default(10)        // トークデッキ数
+  selectedGenres    String[] @default([])
+  customDeckIds     String[] @default([])        // 選択したオリジナルデッキ
+  usedCardIds       String[] @default([])
+  currentCardIndex  Int      @default(0)         // 現在何枚目か
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("game_sessions")
+}
