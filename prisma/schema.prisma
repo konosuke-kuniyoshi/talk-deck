@@ -81,3 +81,15 @@ model GameSession {
   
   @@map("game_sessions")
 }
+
+model Room {
+  id            String   @id // uuidやcuid
+  players       String[] // 参加者名の配列
+  requiredCount Int
+  selectedGenres String[] @default([]) // 選択ジャンルID
+  cardCount     Int      @default(4)  // 配るカード枚数
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("rooms")
+}

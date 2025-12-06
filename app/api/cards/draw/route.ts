@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
             ? {
                 id: { notIn: excludeCardIds } }
             : {
-                genreIds: { in: genreIds },
+                genreId: { in: genreIds },
                 id: { notIn: excludeCardIds }
             };
 

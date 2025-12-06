@@ -9,17 +9,15 @@ interface GameSetupProps {
 
 interface GameSetupData {
     players: Player[];
+    requiredCount: number;
     cardCount: number;
     selectedGenres: string[];
 }
 
 export default function GameSetup({ onComplete }: GameSetupProps) {
     // プレイヤー設定
+    const [playerName, setPlayerName] = useState<string>('');
     const [playerCount, setPlayerCount] = useState(2);
-    const [players, setPlayers] = useState<Player[]>([
-        { id: '1', name: '' },
-        { id: '2', name: '' }
-    ]);
 
     // カード設定
     const [cardCount, setCardCount] = useState(10);
@@ -31,7 +29,7 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
     // その他
     const [loading, setLoading] = useState(true);
 
-      // コンポーネント表示時にジャンル一覧を取得
+    // コンポーネント表示時にジャンル一覧を取得
     useEffect(() => {
         fetchGenres();
     }, []);
@@ -48,21 +46,6 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
         }
     };
 
-    const handlePlayerCountChange = (count: number) => {
-        setPlayerCount(count);
-        const newPlayers = Array.from({ length: count }, (_, i) => ({
-            id: String(i + 1),
-            name: players[i]?.name || ''  // 既存の名前を保持
-        }));
-        setPlayers(newPlayers);
-    };
-
-    const handleNameChange = (id: string, name: string) => {
-        setPlayers(players.map(p => 
-            p.id === id ? { ...p, name } : p
-        ));
-    };
-
     const toggleGenre = (genreId: string) => {
         setSelectedGenres(prev => {
             // 既に選択済みなら削除
@@ -76,22 +59,19 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
         // バリデーション
-        const validPlayers = players.filter(p => p.name.trim() !== '');
-        if (validPlayers.length < 2) {
-            alert('プレイヤー名を2人以上入力してください');
+        if (!playerName.trim()) {
+            alert('表示名を入力してください');
             return;
         }
-        
         if (selectedGenres.length === 0) {
             alert('ジャンルを1つ以上選択してください');
             return;
         }
-
-        // 親コンポーネントに渡す
+        // 親コンポーネントに渡す（1人のみ）
         onComplete({
-            players: validPlayers,
+            players: [{ id: '1', name: playerName.trim() }],
+            requiredCount: playerCount,
             cardCount,
             selectedGenres
         });
@@ -102,19 +82,35 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
         return (
         <div className="w-full max-w-2xl mx-auto p-6">
             <div className="text-center text-gray-600">
-            読み込み中...
+                読み込み中...
             </div>
         </div>
         );
     }
 
     return (
-        <div className="w-full max-w-2xl mx-auto p-6">
+        <div className="w-full max-w-2xl mx-auto p-6 overflow-y-auto">
             <h2 className="text-3xl font-bold mb-8 text-center text-gray-800">
                 ゲーム設定
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-8">
+
+                {/* プレイヤー名入力 */}
+                <div>
+                    <label className="block text-sm font-medium mb-3 text-gray-700">
+                        表示名
+                    </label>
+                    <div className="space-y-3">
+                        <input
+                            type="text"
+                            value={playerName}
+                            onChange={(e) => setPlayerName(e.target.value)}
+                            placeholder="プレイヤー1"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
 
                 {/* プレイヤー人数選択 */}
                 <div>
@@ -126,7 +122,7 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                         <button
                             key={count}
                             type="button"
-                            onClick={() => handlePlayerCountChange(count)}
+                            onClick={() => setPlayerCount(count)}
                             className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
                             playerCount === count
                                 ? 'bg-blue-600 text-white'
@@ -139,29 +135,10 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                     </div>
                 </div>
 
-                {/* プレイヤー名入力 */}
-                <div>
-                    <label className="block text-sm font-medium mb-3 text-gray-700">
-                        プレイヤー名
-                    </label>
-                    <div className="space-y-3">
-                        {players.map((player, index) => (
-                        <input
-                            key={player.id}
-                            type="text"
-                            value={player.name}
-                            onChange={(e) => handleNameChange(player.id, e.target.value)}
-                            placeholder={`プレイヤー ${index + 1}`}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        ))}
-                    </div>
-                </div>
-
                 {/* カード枚数選択 */}
                 <div>
                     <label className="block text-sm font-medium mb-3 text-gray-700">
-                        トークデッキ数
+                        トークテーマ数
                     </label>
                     <div className="grid grid-cols-4 gap-3">
                         {[5, 10, 20, 30].map(count => (
@@ -199,8 +176,8 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                         >
                             <div className="flex items-center justify-between">
                                 <div>
-                                <div className="font-semibold text-gray-800">ランダム</div>
-                                <div className="text-sm text-gray-600">全ジャンルからランダム</div>
+                                    <div className="font-semibold text-gray-800">すべて</div>
+                                    <div className="text-sm text-gray-600">全ジャンルからランダム</div>
                                 </div>
                                 {selectedGenres.includes('random') && (
                                 <div className="text-purple-500 text-xl">✓</div>
@@ -229,7 +206,7 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                                     className="font-semibold"
                                     style={{ color: genre.color }}
                                     >
-                                    {genre.name}
+                                        {genre.name}
                                     </div>
                                     {genre.description && (
                                     <div className="text-sm text-gray-600">{genre.description}</div>
@@ -240,7 +217,7 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                                     className="text-xl"
                                     style={{ color: genre.color }}
                                     >
-                                    ✓
+                                        ✓
                                     </div>
                                 )}
                             </div>
