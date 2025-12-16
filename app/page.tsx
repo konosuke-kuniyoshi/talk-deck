@@ -38,15 +38,19 @@ export default function Home() {
             onComplete={async (data) => {
               const newRoomId = uuidv4();
               // ルーム情報をAPIに保存
+              // players配列を必ずrequiredCount分で初期化
+              const players = Array(data.requiredCount).fill('');
+              players[0] = data.ownerName;
               await fetch('/api/room', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   roomId: newRoomId,
-                  players: [data.players[0].name],
+                  players,
                   requiredCount: data.requiredCount,
                   selectedGenres: data.selectedGenres,
-                  cardCount: data.cardCount
+                  cardCount: data.cardCount,
+                  ownerName: data.ownerName
                 })
               });
               // ルームページへ遷移

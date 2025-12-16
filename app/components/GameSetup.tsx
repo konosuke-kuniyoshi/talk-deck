@@ -12,6 +12,7 @@ interface GameSetupData {
     requiredCount: number;
     cardCount: number;
     selectedGenres: string[];
+    ownerName: string;
 }
 
 export default function GameSetup({ onComplete }: GameSetupProps) {
@@ -73,7 +74,8 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
             players: [{ id: '1', name: playerName.trim() }],
             requiredCount: playerCount,
             cardCount,
-            selectedGenres
+            selectedGenres,
+            ownerName: playerName.trim()
         });
     };
 
@@ -106,7 +108,7 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                             type="text"
                             value={playerName}
                             onChange={(e) => setPlayerName(e.target.value)}
-                            placeholder="プレイヤー1"
+                            placeholder="プレイヤー名"
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -231,7 +233,7 @@ export default function GameSetup({ onComplete }: GameSetupProps) {
                 type="submit"
                 className="w-full py-4 px-6 rounded-xl font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
                 >
-                    ゲーム開始
+                    ルーム作成
                 </button>
             </form>
         </div>
