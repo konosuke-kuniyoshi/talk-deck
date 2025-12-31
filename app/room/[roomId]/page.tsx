@@ -96,8 +96,8 @@ const RoomPage = () => {
         selectedGenres={selectedGenres}
         cardCount={cardCount}
         requiredCount={requiredCount}
-        playerName={players[selfIndex] || ''}
-        otherPlayerNames={players.filter((_, i) => i !== selfIndex)}
+        players={players}
+        selfIndex={selfIndex}
       />
     ) : (
       <WaitingRoom

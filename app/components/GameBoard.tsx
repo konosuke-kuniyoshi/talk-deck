@@ -19,35 +19,51 @@ interface GameBoardProps {
     selectedGenres: string[];
     cardCount: number;
     requiredCount: number;
-    otherPlayerNames: string[];
-    playerName: string; // 自分のプレイヤー名
+    players: string[];
+    selfIndex: number;
 }
 
-export default function GameBoard({ roomId, selectedGenres, cardCount, requiredCount, otherPlayerNames, playerName }: GameBoardProps) {
+export default function GameBoard({ roomId, selectedGenres, cardCount, requiredCount, players, selfIndex }: GameBoardProps) {
+    const [isGameOver, setIsGameOver] = useState(false);
     const [hand, setHand] = useState<CardWithGenre[]>([]);
     const [centerCard, setCenterCard] = useState<CardWithGenre | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    // otherPlayerNamesはpropsの値のみを使用（仮名生成はしない）
 
-    // プレイヤー順（自分＋他プレイヤー）
-    const allPlayerNames = [playerName, ...otherPlayerNames];
-    // ゲーム開始時にランダムな順番で並び替え
     const [playerOrder, setPlayerOrder] = useState<string[]>([]);
+    const [orderIndexes, setOrderIndexes] = useState<number[]>([]); // ランダム順インデックス
     const [turnIndex, setTurnIndex] = useState(0);
+    // Socket取得
+    const socket = getSocket();
+    
+    // プレイヤー名から自分のランダム順インデックスを取得
+    const myOrderIndex = orderIndexes.findIndex(i => i === selfIndex);
+
+    // --- 追加: 全員の手札カードIDを集約するstate ---
+    // { [playerName]: CardWithGenre[] } 形式
+    const [allHands, setAllHands] = useState<{ [player: string]: CardWithGenre[] }>({});
+
+    // 自分の手札が更新されたらallHandsも更新
     useEffect(() => {
-        // シャッフル関数
-        function shuffle(array: string[]) {
-            const arr = [...array];
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
+        if (!playerOrder || playerOrder.length === 0) return;
+        setAllHands(prev => ({ ...prev, [playerOrder[myOrderIndex !== -1 ? myOrderIndex : selfIndex]]: hand }));
+    }, [hand, playerOrder, myOrderIndex, selfIndex]);
+
+    // gameStartedでランダム順配列を受信
+    useEffect(() => {
+        if (!socket) return;
+        const handler = (data: { shuffledIndexes: number[] }) => {
+            if (data && Array.isArray(data.shuffledIndexes)) {
+                setOrderIndexes(data.shuffledIndexes);
+                setPlayerOrder(data.shuffledIndexes.map(i => players[i]));
+                setTurnIndex(0);
             }
-            return arr;
-        }
-        setPlayerOrder(shuffle(allPlayerNames));
-        setTurnIndex(0);
-    }, [roomId]);
+        };
+        socket.on('gameStarted', handler);
+        return () => {
+            socket.off('gameStarted', handler);
+        };
+    }, [players]);
 
     // 手札を配る処理
     const fetchCards = async () => {
@@ -59,14 +75,26 @@ export default function GameBoard({ roomId, selectedGenres, cardCount, requiredC
         setLoading(true);
         setError(null);
         try {
+            // --- 追加: すでに配られた全員分のカードIDを集める ---
+            const excludeCardIds: string[] = Object.values(allHands)
+                .flat()
+                .map(card => card.id);
+
             const res = await fetch('/api/cards/draw', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ genreIds: selectedGenres, cardCount })
+                body: JSON.stringify({ genreIds: selectedGenres, cardCount, excludeCardIds })
             });
             if (!res.ok) throw new Error('カード取得に失敗しました');
             const data = await res.json();
             setHand(data);
+            // 配布後に自分の手札をallHandsに反映
+            if (playerOrder && playerOrder.length > 0) {
+                setAllHands(prev => ({
+                    ...prev,
+                    [playerOrder[myOrderIndex !== -1 ? myOrderIndex : selfIndex]]: data
+                }));
+            }
         } catch (e: any) {
             setError(e.message);
         } finally {
@@ -77,11 +105,17 @@ export default function GameBoard({ roomId, selectedGenres, cardCount, requiredC
         fetchCards();
     }, [selectedGenres, cardCount]);
 
-    // socket取得
-    const socket = getSocket();
-    // カードを場に出す処理
-    // 自分のターンのみカードを出せる（ターン表示と同じロジックで判定）
-    const isMyTurn = playerOrder.length > 0 && playerOrder[turnIndex % playerOrder.length] === playerName;
+    // ゲーム終了判定
+    useEffect(() => {
+        if (turnIndex + 1 > 0 && cardCount > 0 && turnIndex + 1 >= cardCount) {
+            setIsGameOver(true);
+        }
+    }, [turnIndex, cardCount]);
+
+    // 自分のターン判定（ターン表示と同じロジックで判定）
+    const baseOrder = playerOrder.length > 0 ? playerOrder : players;
+    const myIdx = playerOrder.length > 0 && myOrderIndex !== -1 ? myOrderIndex : selfIndex;
+    const isMyTurn = baseOrder.length > 0 && (turnIndex % baseOrder.length) === myIdx;
     const handleCardClick = (cardIdx: number) => {
         if (!isMyTurn) return;
         const selected = hand[cardIdx];
@@ -107,45 +141,68 @@ export default function GameBoard({ roomId, selectedGenres, cardCount, requiredC
         return () => {
             socket.off('centerCard', handler);
         };
-    }, [socket, roomId]);
+    }, [roomId]);
 
     const handCount = 4;
 
     // 他プレイヤーの配置情報
     const getOtherPlayerPositions = () => {
-        if (requiredCount === 1) return [];
-        if (requiredCount === 2) return [
-            { label: otherPlayerNames[0] || '', style: 'absolute top-8 left-1/2 -translate-x-1/2' }
+        // playerOrderが空ならplayersで暫定表示
+        const baseOrder = playerOrder.length > 0 ? playerOrder : players;
+        const myIdx = playerOrder.length > 0 && myOrderIndex !== -1 ? myOrderIndex : selfIndex;
+        if (baseOrder.length <= 1) return [];
+        const others = baseOrder.filter((_, idx) => idx !== myIdx);
+        if (others.length === 1) return [
+            { label: others[0] || '', style: 'absolute top-8 left-1/2 -translate-x-1/2' }
         ];
-        if (requiredCount === 3) return [
-            { label: otherPlayerNames[0] || '', style: 'absolute top-16 left-1/4 -translate-x-1/2' },
-            { label: otherPlayerNames[1] || '', style: 'absolute top-16 right-1/4 translate-x-1/2' }
+        if (others.length === 2) return [
+            { label: others[0] || '', style: 'absolute top-16 left-1/4 -translate-x-1/2' },
+            { label: others[1] || '', style: 'absolute top-16 right-1/4 translate-x-1/2' }
         ];
-        if (requiredCount === 4) return [
-            { label: otherPlayerNames[0] || '', style: 'absolute top-16 left-1/6 -translate-x-1/2' },
-            { label: otherPlayerNames[1] || '', style: 'absolute top-8 left-1/2 -translate-x-1/2' },
-            { label: otherPlayerNames[2] || '', style: 'absolute top-16 right-1/6 translate-x-1/2' }
+        if (others.length === 3) return [
+            { label: others[0] || '', style: 'absolute top-16 left-1/6 -translate-x-1/2' },
+            { label: others[1] || '', style: 'absolute top-8 left-1/2 -translate-x-1/2' },
+            { label: others[2] || '', style: 'absolute top-16 right-1/6 translate-x-1/2' }
         ];
         return [];
     };
     const otherPositions = getOtherPlayerPositions();
 
+    if (isGameOver) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-green-700">
+                <div className="text-3xl font-bold text-white mb-6">ゲーム終了！</div>
+                <div className="text-lg text-white mb-8">お疲れさまでした！</div>
+                <button
+                    className="px-6 py-3 bg-white text-green-700 font-bold rounded shadow hover:bg-green-100 transition"
+                    onClick={() => { window.location.href = '/'; }}
+                >
+                    ホームに戻る
+                </button>
+            </div>
+        );
+    }
     return (
         <div className="relative flex flex-col h-screen justify-between bg-green-700">
             {/* 現在のターン表示（画面左上） */}
             <div className="absolute top-4 left-4 z-50 text-white text-lg font-bold bg-black/40 px-4 py-1 rounded" style={{ minWidth: '260px' }}>
                 {(() => {
-                    const currentTurnName = playerOrder.length > 0 ? playerOrder[turnIndex % playerOrder.length] : '';
-                    const isMyTurn = currentTurnName === playerName;
+                    // playerOrderが空ならplayersで暫定表示
+                    const baseOrder = playerOrder.length > 0 ? playerOrder : players;
+                    const myIdx = playerOrder.length > 0 && myOrderIndex !== -1 ? myOrderIndex : selfIndex;
+                    const currentTurnName = baseOrder.length > 0
+                        ? (baseOrder[turnIndex % baseOrder.length] || '不明なプレイヤー')
+                        : '';
+                    const isMyTurnDisplay = baseOrder.length > 0 && (turnIndex % baseOrder.length) === myIdx;
                     return (
                         <>
                             <div className="flex items-center text-lg font-bold">
                                 <span style={{ minWidth: '7em', display: 'inline-block' }}>現在のターン：</span>
-                                <span>{isMyTurn ? 'あなた' : currentTurnName}</span>
+                                <span>{isMyTurnDisplay ? 'あなた' : currentTurnName}</span>
                             </div>
                             <div className="flex items-center text-lg font-bold mt-1">
                                 <span style={{ minWidth: '7em', display: 'inline-block' }}>ターン数　　：</span>
-                                <span>{turnIndex + 1}</span>
+                                <span>{turnIndex + 1} / {cardCount}</span>
                             </div>
                         </>
                     );

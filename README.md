@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Talk Deck
 
-## Getting Started
+リアルタイムで遊べるオンラインカードゲームアプリです。Next.js、Socket.io、Prismaを用いて、複数人でのターン制カードゲームを実現しています。
 
-First, run the development server:
+## 主な機能
+- ルーム作成・参加（URL共有で招待）
+- 参加者名・人数管理（定員制御、オーナー判定）
+- ゲーム開始・ターン制進行
+- カードの配布・プレイ
+- リアルタイム同期（Socket.io）
+- ゲーム終了判定（ターン数上限など）
+- 参加者の切断・再接続対応
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 技術スタック
+- Next.js (App Router, TypeScript)
+- React, Tailwind CSS
+- Socket.io（リアルタイム通信）
+- Prisma（DB管理, SQLite/PostgreSQL対応）
+- Node.js サーバー
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## セットアップ手順
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. 依存パッケージのインストール
+	```sh
+	npm install
+	```
+2. DBマイグレーション・初期化
+	```sh
+	npx prisma migrate deploy
+	npx prisma db seed
+	```
+3. サーバー起動
+	```sh
+	npm run dev
+	# または
+	node server.js
+	```
+	- Next.js: http://localhost:3000/
+	- Socket.ioサーバー: http://localhost:4000/
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ディレクトリ構成
 
-## Learn More
+- `app/` ... Next.jsアプリ本体
+  - `components/` ... UIコンポーネント（GameBoard, WaitingRoom, GameSetup等）
+  - `api/` ... APIルート
+  - `room/` ... ルームごとのページ
+  - `lib/` ... Prisma/Socket等のライブラリ
+- `server.js` ... Socket.ioサーバー
+- `prisma/` ... Prismaスキーマ・マイグレーション
+- `public/` ... 静的ファイル
 
-To learn more about Next.js, take a look at the following resources:
+## 開発Tips
+- 主要な状態管理は`app/components/`配下のReactコンポーネントで行います。
+- サーバー側のルーム・参加者管理は`server.js`で実装。
+- DB操作は`prisma/`と`app/lib/prisma.ts`。
+- WebSocketイベントは`lib/socket.ts`と`server.js`で定義。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## デプロイ
+- `Procfile`/`aws-elastic-beanstalk-cli-setup/`を利用し、AWS Elastic Beanstalk等でのデプロイに対応。
+- 環境変数やDB接続設定は適宜`.env`で管理してください。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ライセンス
+MIT

@@ -93,7 +93,9 @@ io.on('connection', (socket) => {
             roomPlayers[roomId][selfIndex] = name;
         }
         // 参加者リスト・必要参加者数を全員に最新状態で通知
-        io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId], selfIndexes: roomSocketIndex[roomId] });
+        // 空文字を除去した配列を送信し、順序を全クライアントで統一
+        const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
+        io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
         io.to(roomId).emit('requiredCountUpdated', { requiredCount });
     });
     
@@ -109,7 +111,8 @@ io.on('connection', (socket) => {
             }
         }
         io.to(roomId).emit('requiredCountUpdated', { requiredCount });
-        io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId], selfIndexes: roomSocketIndex[roomId] });
+        const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
+        io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
     });
 
     // プレイヤー名変更イベント
@@ -121,14 +124,15 @@ io.on('connection', (socket) => {
                 roomPlayers[roomId][index] = name;
             }
             // 全員に最新リストとselfIndexesを送信
-            io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId], selfIndexes: roomSocketIndex[roomId] });
+            const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
+            io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
         }
     });
 
     // ゲーム開始イベント
     socket.on('startGame', ({ roomId }) => {
         console.log('[startGame] called', roomId);
-        // Roomのstatusを'playing'に更新
+        // Roomのstatusを'playing'に更新し、ランダム順配列を生成して送信
         (async () => {
             try {
                 const { prisma } = require('./app/lib/prisma');
@@ -140,7 +144,15 @@ io.on('connection', (socket) => {
             } catch (e) {
                 console.error(`[startGame] Failed to update room status:`, { roomId, error: e });
             }
-            io.to(roomId).emit('gameStarted');
+            // roomPlayersのインデックスをシャッフル
+            const playerCount = roomPlayers[roomId]?.length || 0;
+            const shuffledIndexes = Array.from({ length: playerCount }, (_, i) => i);
+            for (let i = shuffledIndexes.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledIndexes[i], shuffledIndexes[j]] = [shuffledIndexes[j], shuffledIndexes[i]];
+            }
+            // 全クライアントにランダム順配列を送信
+            io.to(roomId).emit('gameStarted', { shuffledIndexes });
         })();
     });
 
@@ -176,7 +188,8 @@ io.on('connection', (socket) => {
                         roomSocketIndex[roomId][sid]--;
                     }
                 }
-                io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId], selfIndexes: roomSocketIndex[roomId] });
+                const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
+                io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
                 // 参加者が0人になったらDBからルーム削除
                 if (roomPlayers[roomId].filter(n => n).length === 0) {
                     (async () => {
