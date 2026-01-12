@@ -1,10 +1,19 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
+// サーバー側でroomDealtCardIdsを参照するためにグローバル変数を利用
+// （本番運用ではメモリ永続性や多プロセス対応が必要だが、ここでは簡易実装）
+// @ts-ignore
+if (!global.roomDealtCardIds) global.roomDealtCardIds = {};
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { genreIds, cardCount, excludeCardIds = [] } = body;
+        const { genreIds, cardCount, roomId } = body;
+        // サーバー側で配布済みカードIDを取得
+        // @ts-ignore
+        const roomDealtCardIds = global.roomDealtCardIds || {};
+        const excludeCardIds = Array.from(roomDealtCardIds[roomId] || []).filter((id): id is string => typeof id === 'string');
 
         // バリデーション
         if (!genreIds || genreIds.length === 0) {
@@ -22,7 +31,7 @@ export async function POST(request: NextRequest) {
         }
 
         // ランダムが選択されているか確認
-        const isRandom = genreIds.includes('rondom');
+        const isRandom = genreIds.includes('random');
 
         // 条件に合うカードを全部取得
         const whereClause = isRandom

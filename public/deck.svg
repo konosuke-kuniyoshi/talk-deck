@@ -1,18 +1,56 @@
-<!--?xml version="1.0" encoding="utf-8"?-->
-<!-- Generator: Adobe Illustrator 18.1.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-
-<svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 10 262 370" xml:space="preserve">
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 262 460" xml:space="preserve">
 <style type="text/css">
-	.st0{fill:#4B4B4B;}
+    .st0{
+        fill:#4B4B4B;      /* 元の塗りつぶし色 */
+        stroke: #3a3a3a;   /* 枠線の色（白）を追加 */
+        stroke-width: 1;   /* 枠線の太さを追加 */
+    }
 </style>
-<g>
-	<path class="st0" d="M262.174,356.27V40.633c0-17.026-13.779-30.822-30.814-30.822H30.83C13.813,9.81,0,23.607,0,40.633V356.27
+
+<defs>
+    <path id="card-base" d="M262.174,356.27V40.633c0-17.026-13.779-30.822-30.814-30.822H30.83C13.813,9.81,0,23.607,0,40.633V356.27
 		c0,17.026,13.813,30.813,30.83,30.813h200.53C248.395,387.083,262.174,373.296,262.174,356.27z M185.773,43.643h28.52
 		c9.748,0.009,17.641,7.901,17.624,17.642l0.016,28.52h-6.712l-0.018-18.122l-21.317-21.318h-18.114V43.643z M30.273,61.284
 		c0-9.74,7.893-17.633,17.624-17.633h28.52v6.712H58.304L36.986,71.698v18.106h-6.713V61.284z M47.881,353.252
 		c-9.715-0.008-17.624-7.893-17.608-17.633L30.257,307.1h6.712v18.113l21.335,21.326h18.114v6.713H47.881z M177.391,232.621
 		c-2.9-3.424-6.392-5.524-10.001-6.789c-1.669,2.589-3.575,5.026-5.7,7.235c10.929,16.899-2.496,32.315,13.914,42.67
-		 M214.293,353.243h-28.52v-6.704h18.114l21.317-21.335V307.1h6.713v28.519C231.918,345.358,224.042,353.243,214.293,353.243z" style="fill: rgb(75, 75, 75);"></path>
-	<text x="128" y="220" text-anchor="middle" font-size="64" font-family="Arial, sans-serif" fill="#E11D48" font-weight="bold">TALK</text>
+		 M214.293,353.243h-28.52v-6.704h18.114l21.317-21.335V307.1h6.713v28.519C231.918,345.358,224.042,353.243,214.293,353.243z" />
+</defs>
+
+<g>
+    <use xlink:href="#card-base" style="fill:#1a1a1a;" transform="translate(0, 58)"/>
+    <use xlink:href="#card-base" style="fill:#1c1c1c;" transform="translate(0, 56)"/>
+    <use xlink:href="#card-base" style="fill:#1e1e1e;" transform="translate(0, 54)"/>
+    <use xlink:href="#card-base" style="fill:#202020;" transform="translate(0, 52)"/>
+    <use xlink:href="#card-base" style="fill:#222222;" transform="translate(0, 50)"/>
+    <use xlink:href="#card-base" style="fill:#242424;" transform="translate(0, 48)"/>
+    <use xlink:href="#card-base" style="fill:#262626;" transform="translate(0, 46)"/>
+    <use xlink:href="#card-base" style="fill:#282828;" transform="translate(0, 44)"/>
+    <use xlink:href="#card-base" style="fill:#2a2a2a;" transform="translate(0, 42)"/>
+    <use xlink:href="#card-base" style="fill:#2c2c2c;" transform="translate(0, 40)"/>
+    <use xlink:href="#card-base" style="fill:#2e2e2e;" transform="translate(0, 38)"/>
+    <use xlink:href="#card-base" style="fill:#303030;" transform="translate(0, 36)"/>
+    <use xlink:href="#card-base" style="fill:#323232;" transform="translate(0, 34)"/>
+    <use xlink:href="#card-base" style="fill:#343434;" transform="translate(0, 32)"/>
+    <use xlink:href="#card-base" style="fill:#363636;" transform="translate(0, 30)"/>
+    <use xlink:href="#card-base" style="fill:#383838;" transform="translate(0, 28)"/>
+    <use xlink:href="#card-base" style="fill:#3a3a3a;" transform="translate(0, 26)"/>
+    <use xlink:href="#card-base" style="fill:#3c3c3c;" transform="translate(0, 24)"/>
+    <use xlink:href="#card-base" style="fill:#3e3e3e;" transform="translate(0, 22)"/>
+    <use xlink:href="#card-base" style="fill:#404040;" transform="translate(0, 20)"/>
+    <use xlink:href="#card-base" style="fill:#424242;" transform="translate(0, 18)"/>
+    <use xlink:href="#card-base" style="fill:#434343;" transform="translate(0, 16)"/>
+    <use xlink:href="#card-base" style="fill:#444444;" transform="translate(0, 14)"/>
+    <use xlink:href="#card-base" style="fill:#454545;" transform="translate(0, 12)"/>
+    <use xlink:href="#card-base" style="fill:#464646;" transform="translate(0, 10)"/>
+    <use xlink:href="#card-base" style="fill:#474747;" transform="translate(0, 8)"/>
+    <use xlink:href="#card-base" style="fill:#484848;" transform="translate(0, 6)"/>
+    <use xlink:href="#card-base" style="fill:#494949;" transform="translate(0, 4)"/>
+    <use xlink:href="#card-base" style="fill:#4a4a4a;" transform="translate(0, 2)"/>
+    
+    <use xlink:href="#card-base" class="st0" transform="translate(0, 0)"/>
+    
+    <text x="128" y="220" text-anchor="middle" font-size="64" font-family="Arial, sans-serif" fill="#E11D48" font-weight="bold">TALK</text>
 </g>
 </svg>

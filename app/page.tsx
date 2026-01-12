@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getSocket } from './lib/socket';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,6 +15,23 @@ export default function Home() {
   const [roomId, setRoomId] = useState('');
   const [players, setPlayers] = useState<string[]>([]);
   const [requiredCount, setRequiredCount] = useState(2);
+  const [selfIndex, setSelfIndex] = useState(0);
+
+  // playersUpdatedイベントでplayers stateを更新
+  useEffect(() => {
+    const socket = getSocket();
+    const handler = (data: { players: string[], selfIndexes?: { [socketId: string]: number } }) => {
+      setPlayers(data.players);
+      // socket.id→indexのマップがあれば自分のselfIndexをセット
+      if (data.selfIndexes && socket.id && data.selfIndexes[socket.id] !== undefined) {
+        setSelfIndex(data.selfIndexes[socket.id]);
+      }
+    };
+    socket.on('playersUpdated', handler);
+    return () => {
+      socket.off('playersUpdated', handler);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[url('/back_ground_talk.png')] bg-cover bg-center bg-no-repeat">
@@ -69,6 +87,7 @@ export default function Home() {
             roomId={roomId}
             players={players ?? []}
             requiredCount={requiredCount}
+            selfIndex={selfIndex}
           />
         )}
       </div>

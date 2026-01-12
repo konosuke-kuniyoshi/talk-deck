@@ -19,10 +19,12 @@ const io = new Server(httpServer, {
     }
 });
 
-// ルームごとにplayers配列とsocketId→indexのマップ、ターンインデックスを管理
+// ルームごとにplayers配列とsocketId→indexのマップ、ターンインデックス、全員分の手札カードID、配布済みカードIDを管理
 const roomPlayers = {};
 const roomSocketIndex = {};
 const roomTurnIndex = {};
+const roomHands = {}; // { [roomId]: { [playerName]: CardWithGenre[] } }
+const roomDealtCardIds = {}; // { [roomId]: Set<string> }
 
 io.on('connection', (socket) => {
         // すべてのイベントをログ出力
@@ -94,13 +96,12 @@ io.on('connection', (socket) => {
         }
         // 参加者リスト・必要参加者数を全員に最新状態で通知
         // 空文字を除去した配列を送信し、順序を全クライアントで統一
-        const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
-        io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
+        io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId].slice(), selfIndexes: roomSocketIndex[roomId] });
         io.to(roomId).emit('requiredCountUpdated', { requiredCount });
     });
     
     // 参加人数変更イベント
-    socket.on('updateRequiredCount', ({ roomId, requiredCount }) => {
+    socket.on('updateRequiredCount', async ({ roomId, requiredCount }) => {
         // 既存参加者が1人以上の場合のみ空欄追加・削除
         if (roomPlayers[roomId] && roomPlayers[roomId].length > 0) {
             while (roomPlayers[roomId].length < requiredCount) {
@@ -110,22 +111,40 @@ io.on('connection', (socket) => {
                 roomPlayers[roomId].pop();
             }
         }
+        // DBにrequiredCountを保存
+        try {
+            const { prisma } = require('./app/lib/prisma.js');
+            await prisma.room.update({
+                where: { id: roomId },
+                data: { requiredCount }
+            });
+        } catch (e) {
+            console.error(`[updateRequiredCount] DB update error:`, e);
+        }
         io.to(roomId).emit('requiredCountUpdated', { requiredCount });
-        const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
-        io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
+        io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId].slice(), selfIndexes: roomSocketIndex[roomId] });
     });
 
     // プレイヤー名変更イベント
-    socket.on('updatePlayerName', ({ roomId, index, name }) => {
+    socket.on('updatePlayerName', async ({ roomId, index, name }) => {
         // サーバー側players配列を更新
         if (roomPlayers[roomId] && roomSocketIndex[roomId]) {
             // このsocket.idに割り当てられたindexのみ上書き可能
             if (roomSocketIndex[roomId][socket.id] === index) {
                 roomPlayers[roomId][index] = name;
+                // DBにも保存
+                try {
+                    const { prisma } = require('./app/lib/prisma.js');
+                    await prisma.room.update({
+                        where: { id: roomId },
+                        data: { players: roomPlayers[roomId] }
+                    });
+                } catch (e) {
+                    console.error(`[updatePlayerName] DB update error:`, e);
+                }
             }
             // 全員に最新リストとselfIndexesを送信
-            const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
-            io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
+            io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId].slice(), selfIndexes: roomSocketIndex[roomId] });
         }
     });
 
@@ -152,14 +171,24 @@ io.on('connection', (socket) => {
                 [shuffledIndexes[i], shuffledIndexes[j]] = [shuffledIndexes[j], shuffledIndexes[i]];
             }
             // 全クライアントにランダム順配列を送信
-            io.to(roomId).emit('gameStarted', { shuffledIndexes });
+            io.to(roomId).emit('gameStarted', {
+                shuffledIndexes,
+                players: roomPlayers[roomId].slice()
+            });
         })();
     });
 
-    // カード配布イベント
-    socket.on('dealCards', ({ roomId, playerId }) => {
-        // ここでカード配布のロジックを実装
-        // 例: io.to(roomId).emit('cardsDealt', { ... });
+    // カード配布イベント（例: クライアントからリクエストが来た場合）
+    socket.on('dealCards', ({ roomId, playerName, cards }) => {
+        // roomHandsを初期化
+        if (!roomHands[roomId]) roomHands[roomId] = {};
+        // そのプレイヤーの手札を記録
+        roomHands[roomId][playerName] = cards;
+        // 配布済みカードIDを一元管理
+        if (!roomDealtCardIds[roomId]) roomDealtCardIds[roomId] = new Set();
+        cards.forEach(card => roomDealtCardIds[roomId].add(card.id));
+        // 全員に最新の全員分の手札IDリストを送信
+        io.to(roomId).emit('handsUpdated', roomHands[roomId]);
     });
 
     // 場のカード・ターン情報の共有
@@ -181,15 +210,10 @@ io.on('connection', (socket) => {
         for (const roomId of Object.keys(roomSocketIndex)) {
             const idx = roomSocketIndex[roomId][socket.id];
             if (typeof idx === 'number' && roomPlayers[roomId]) {
-                roomPlayers[roomId].splice(idx, 1);
+                // 退出者のインデックスを空文字にする（spliceせず席順維持）
+                roomPlayers[roomId][idx] = '';
                 delete roomSocketIndex[roomId][socket.id];
-                for (const sid of Object.keys(roomSocketIndex[roomId])) {
-                    if (roomSocketIndex[roomId][sid] > idx) {
-                        roomSocketIndex[roomId][sid]--;
-                    }
-                }
-                const filteredPlayers = roomPlayers[roomId].map(n => n || '').slice();
-                io.to(roomId).emit('playersUpdated', { players: filteredPlayers, selfIndexes: roomSocketIndex[roomId] });
+                io.to(roomId).emit('playersUpdated', { players: roomPlayers[roomId].slice(), selfIndexes: roomSocketIndex[roomId] });
                 // 参加者が0人になったらDBからルーム削除
                 if (roomPlayers[roomId].filter(n => n).length === 0) {
                     (async () => {
